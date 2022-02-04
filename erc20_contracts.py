@@ -4,6 +4,10 @@ from web3 import Web3
 import ray
 ray.init()
 
+from clickhouse_driver import Client
+
+client = Client(host='localhost')
+
 web3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/b7771067f61c4314baa6d566cbfd88b7'))
 
 balanceOfByte = "70a08231"
@@ -16,28 +20,38 @@ allowanceByte = "dd62ed3e"
 @ray.remote
 def getData(start,end):
     ret = []
-    for i in range(start,end):
-        print(start,"reached here:",end - i)
-        txnsA = web3.eth.get_block(i)
+    for atBlock in range(start,end):
+        print(start,"reached here:",end - atBlock)
+        txnsA = web3.eth.get_block(atBlock)
         txns = AttributeDict(txnsA)
         for txnHash in txns['transactions']:
-            rec = AttributeDict(web3.eth.get_transaction_receipt(txnHash)).contractAddress
-            if rec != None:
-                ercCode = web3.eth.get_code(rec).hex()
-                # print(ercCode)
+            contractAdd = AttributeDict(web3.eth.get_transaction_receipt(txnHash)).contractAddress
+            if contractAdd != None:
+                ercCode = web3.eth.get_code(contractAdd).hex()
+                creator = AttributeDict(web3.eth.get_transaction_receipt(txnHash))['from']
                 if balanceOfByte in ercCode and totalSupplyByte in ercCode and transferByte in ercCode and transferFromByte in ercCode and approveByte in ercCode and allowanceByte in ercCode:
-                    print(txnHash.hex())
-                    ret.append(txnHash.hex())
+                    client.execute('INSERT INTO ERC20_DATA.erc20_contracts (deployedAtBlock,contractAddress,creatorAddress,transactionHash) VALUES',[(atBlock,contractAdd,creator,txnHash.hex())])
+                    
     return ret
 
 finalResult = []
 
-finalResult.append(getData.remote(14130000,14130125))
-finalResult.append(getData.remote(14130125,14130250))
-finalResult.append(getData.remote(14130250,14130375))
-finalResult.append(getData.remote(14130375,14130500))
-finalResult.append(getData.remote(14130500,14130625))
-finalResult.append(getData.remote(14130625,14130750))
+st = 1397553
+
+
+
+# finalResult.append(getData.remote(st,st+125))
+# finalResult.append(getData.remote(st+125,st+250))
+# finalResult.append(getData.remote(st+250,st+375))
+# finalResult.append(getData.remote(st+375,st+500))
+# finalResult.append(getData.remote(st+500,st+625))
+# finalResult.append(getData.remote(st+625,st+750))
+# finalResult.append(getData.remote(st+750,st+875))
+# finalResult.append(getData.remote(st+875,st+1000))
+
+for i in range(8):
+    finalResult.append(getData.remote(st + (i*125),st + ((i+1)*125)))
+
 
 res = ray.get(finalResult)
 
