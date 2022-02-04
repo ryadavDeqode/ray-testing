@@ -39,16 +39,6 @@ finalResult = []
 st = 1397553
 
 
-
-# finalResult.append(getData.remote(st,st+125))
-# finalResult.append(getData.remote(st+125,st+250))
-# finalResult.append(getData.remote(st+250,st+375))
-# finalResult.append(getData.remote(st+375,st+500))
-# finalResult.append(getData.remote(st+500,st+625))
-# finalResult.append(getData.remote(st+625,st+750))
-# finalResult.append(getData.remote(st+750,st+875))
-# finalResult.append(getData.remote(st+875,st+1000))
-
 for i in range(8):
     finalResult.append(getData.remote(st + (i*125),st + ((i+1)*125)))
 
